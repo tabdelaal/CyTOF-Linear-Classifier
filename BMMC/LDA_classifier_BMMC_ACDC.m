@@ -22,7 +22,7 @@ Labels(strcmp('Platelet',Labels))=cellstr('unknown');
 
 % Apply arcsinh5 transformation
 Data=asinh((Data-1)/5);
-%% run LDA Classifier
+%% run LDA Classifier with 5-fold cross-validation
 
 CVO = cvpartition(Labels,'k',5);
 Accuracy = zeros(CVO.NumTestSets,1);
@@ -41,15 +41,17 @@ for i = 1:CVO.NumTestSets
     
     tic
     Predictor = predict(classificationLDA,Data(teIdx,:));
+    testing_time(i)=toc;           %in seconds
     Accuracy(i) = nnz(strcmp(Predictor,Labels(teIdx)))/size(Labels(teIdx),1);
     ConfusionMat = ConfusionMat + confusionmat(Labels(teIdx),Predictor,'order',CellTypes);
-    testing_time(i)=toc;           %in seconds
+    
 end
-Total_time = sum(training_time)+sum(testing_time); 
-cvAcc = mean(Accuracy)*100;
-cvSTD = std(Accuracy)*100;
+Total_time = sum(training_time)+sum(testing_time);
 training_time = mean(training_time);
 testing_time = mean(testing_time);
+cvAcc = mean(Accuracy)*100;
+cvSTD = std(Accuracy)*100;
+disp(['LDA Accuracy = ' num2str(cvAcc) ' ' char(177) ' ' num2str(cvSTD) ' %'])
 clear i Predictor classificationLDA trIdx teIdx CVO Accuracy
 %% Performance evaluation
 
@@ -57,18 +59,21 @@ clear i Predictor classificationLDA trIdx teIdx CVO Accuracy
 Precision = diag(ConfusionMat)./sum(ConfusionMat,1)';
 Recall = diag(ConfusionMat)./sum(ConfusionMat,2);
 Fmeasure = 2 * (Precision.*Recall)./(Precision+Recall);
-% Fmeasure(isnan(Fmeasure)) = 0;
+Fmeasure(isnan(Fmeasure)) = 0;
 MedianFmeasure = median(Fmeasure);
 Subset_size = sum(ConfusionMat,2);
 WeightedFmeasure = (Subset_size./size(Data,1))'*Fmeasure;
+
+disp(['Median F1-score = ' num2str(MedianFmeasure)])
+figure,scatter(log10(Subset_size),Fmeasure,100,'filled'),title('BMMC')
+xlabel('Log10(population size)'),ylabel('F1-score'),box on, grid on
 %% Population Frequency
 
 True_Freq = sum(ConfusionMat,2)./sum(sum(ConfusionMat));
 Predicted_Freq = sum(ConfusionMat,1)'./sum(sum(ConfusionMat));
-Max_Freq_diff = max(abs(True_Freq-Predicted_Freq))*100;
-figure,bar([True_Freq Predicted_Freq])
-% ticklabels=CellTypes;
-% ticklabels = cellfun(@(x) strrep(x,' ','\newline'), ticklabels,'UniformOutput',false);
+Max_Freq_diff = max(abs(True_Freq(1:end-1)-Predicted_Freq(1:end-1)))*100;
+disp(['delta_f = ' num2str(Max_Freq_diff)])
+figure,bar([True_Freq*100 Predicted_Freq*100])
 xticks(1:20)
 xticklabels(CellTypes)
 xtickangle(90)
@@ -76,4 +81,4 @@ set(gca,'FontSize',10)
 set(gca,'XLim',[0 21])
 legend({'True','Predicted'},'FontSize',10)
 legend show
-ylabel('Frequency'),title('BMMC')
+ylabel('Freq. %'),title('BMMC')
