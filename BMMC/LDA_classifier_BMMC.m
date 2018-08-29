@@ -57,9 +57,19 @@ Subset_size = sum(ConfusionMat,2);
 WeightedFmeasure = (Subset_size./size(Data,1))'*Fmeasure;
 
 disp(['Median F1-score = ' num2str(MedianFmeasure)])
+figure,scatter(log10(Subset_size),Fmeasure,100,'filled'),title('BMMC')
+xlabel('Log10(population size)'),ylabel('F1-score'),box on, grid on
 %% Population Frequency
 
 True_Freq = sum(ConfusionMat,2)./sum(sum(ConfusionMat));
 Predicted_Freq = sum(ConfusionMat,1)'./sum(sum(ConfusionMat));
 Max_Freq_diff = max(abs(True_Freq-Predicted_Freq))*100;
 disp(['delta_f = ' num2str(Max_Freq_diff)])
+figure,bar([True_Freq*100 Predicted_Freq*100])
+xticks(1:24)
+xticklabels(CellTypes)
+xtickangle(90)
+set(gca,'FontSize',10)
+legend({'True','Predicted'},'FontSize',10)
+legend show
+ylabel('Freq. %'),title('BMMC')
