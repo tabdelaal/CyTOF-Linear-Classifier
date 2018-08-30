@@ -9,16 +9,15 @@ SamplesData=struct('Data',[],'Labels',{});
 H=dir(fullfile('Samples\', '*.csv'));
 SamplesFiles = cellstr(char(H(1:end).name));
 
-H=dir(fullfile('Labels\', '*.xlsx'));
+H=dir(fullfile('Labels\', '*.csv'));
 LabelsFiles = cellstr(char(H(1:end).name));
 clear H
 
 for i=1:length(SamplesFiles)
     SamplesData(i).Data = csvread(['Samples\' SamplesFiles{i}]);
-    [~,txt]=xlsread(['Labels\' LabelsFiles{i}]);
-    SamplesData(i).Labels = txt;
+    SamplesData(i).Labels = table2cell(readtable(['Labels\' LabelsFiles{i}],'ReadVariableNames',0,'Delimiter',','));
 end
-clear i SamplesFiles LabelsFiles txt
+clear i SamplesFiles LabelsFiles
 
 Labels = [];
 for i=1:length(SamplesData)
@@ -26,12 +25,13 @@ for i=1:length(SamplesData)
 end
 clear i
 
-%% run LDA Classifier
+% Data is already arcsinh(5) transformed
+%% run LDA Classifier with 5-fold cross-validation on samples
 
 CVO = cvpartition(1:1:10,'k',5);
-Accuracy = zeros(CVO.NumTestSets,1);
+Accuracy = zeros(length(SamplesData),1);
 training_time = zeros(CVO.NumTestSets,1);
-testing_time = zeros(CVO.NumTestSets,1);
+testing_time = zeros(length(SamplesData),1);
 CellTypes = unique(Labels);
 ConfusionMat = zeros(length(CellTypes));
 for i = 1:CVO.NumTestSets
@@ -46,33 +46,29 @@ for i = 1:CVO.NumTestSets
     end
     clear j
     
-    DataTest=[];
-    LabelsTest=[];
-    for j=1:length(teIdx)
-        DataTest = [DataTest; SamplesData(teIdx(j)).Data];
-        LabelsTest = [LabelsTest; SamplesData(teIdx(j)).Labels];
-    end
-    clear j
-    
     tic
     classificationLDA = fitcdiscr(...
         DataTrain, ...
         LabelsTrain);
     training_time(i)=toc;          %in seconds
     
-    tic
-    Predictor = predict(classificationLDA,DataTest);
-    Accuracy(i) = nnz(strcmp(Predictor,LabelsTest))/size(LabelsTest,1);
-    ConfusionMat = ConfusionMat + confusionmat(LabelsTest,Predictor,'order',CellTypes);
-    testing_time(i)=toc;           %in seconds
+    
+    for j=1:length(teIdx)
+        tic
+        Predictor = predict(classificationLDA,SamplesData(teIdx(j)).Data);
+        testing_time(teIdx(j))=toc;           %in seconds
+        Accuracy(teIdx(j)) = nnz(strcmp(Predictor,SamplesData(teIdx(j)).Labels))/size(SamplesData(teIdx(j)).Labels,1);
+        ConfusionMat = ConfusionMat + confusionmat(SamplesData(teIdx(j)).Labels,Predictor,'order',CellTypes);
+    end
+    clear j
 end
 Total_time = sum(training_time)+sum(testing_time);
-cvAcc = mean(Accuracy)*100;
-cvSTD = std(Accuracy)*100;
 training_time = mean(training_time);
 testing_time = mean(testing_time);
+cvAcc = mean(Accuracy)*100;
+cvSTD = std(Accuracy)*100;
+disp(['LDA Accuracy = ' num2str(cvAcc) ' ' char(177) ' ' num2str(cvSTD) ' %'])
 clear i Predictor classificationLDA trIdx teIdx CVO Accuracy DataTrain LabelsTrain
-clear DataTest LabelsTest
 %% Performance evaluation
 
 % F1 measure
@@ -83,17 +79,22 @@ MedianFmeasure = median(Fmeasure);
 Subset_size = sum(ConfusionMat,2);
 WeightedFmeasure = (Subset_size./sum(Subset_size))'*Fmeasure;
 
+disp(['Median F1-score = ' num2str(MedianFmeasure)])
+figure,scatter(log10(Subset_size),Fmeasure,100,'filled'),title('PANORAMA')
+xlabel('Log10(population size)'),ylabel('F1-score'),box on, grid on
 %% Population Frequency
 
 True_Freq = sum(ConfusionMat,2)./sum(sum(ConfusionMat));
 Predicted_Freq = sum(ConfusionMat,1)'./sum(sum(ConfusionMat));
 Max_Freq_diff = max(abs(True_Freq-Predicted_Freq))*100;
-figure,bar([True_Freq Predicted_Freq])
-% ticklabels=CellTypes;
-% ticklabels = cellfun(@(x) strrep(x,' ','\newline'), ticklabels,'UniformOutput',false);
+
+disp(['delta_f = ' num2str(Max_Freq_diff)])
+figure,bar([True_Freq*100 Predicted_Freq*100])
 xticks(1:24)
 xticklabels(CellTypes)
 xtickangle(90)
 set(gca,'FontSize',10)
 set(gca,'XLim',[0 25])
-legend({'True','Predicted'},'FontSize',10),title('PANORAMA')
+legend({'True','Predicted'},'FontSize',10)
+legend show
+ylabel('Freq. %'),title('PANORAMA')
