@@ -82,6 +82,7 @@ True_Freq = (sum(ConfusionMat,2)+col1)./(sum(sum(ConfusionMat))+sum(col1));
 Predicted_Freq = sum(ConfusionMat,1)'./(sum(sum(ConfusionMat))+sum(col1));
 Max_Freq_diff = max(abs(True_Freq-Predicted_Freq))*100;
 
+disp(['delta_f = ' num2str(Max_Freq_diff)])
 figure,bar([True_Freq*100 Predicted_Freq*100])
 xticklabels({'B Cells','CD4+ T Cells','CD8+ T Cells','Monocytes'})
 set(gca,'FontSize',20)
