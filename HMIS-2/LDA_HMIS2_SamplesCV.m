@@ -11,34 +11,38 @@ SamplesData=struct('Data',[],'Labels',{});
 H=dir(fullfile('Samples\', '*.csv'));
 SamplesFiles = cellstr(char(H(1:end).name));
 
-H=dir(fullfile('Labels\', '*.xlsx'));
+H=dir(fullfile('Labels\', '*.csv'));
 LabelsFiles = cellstr(char(H(1:end).name));
 clear H
 
 for i=1:length(SamplesFiles)
     SamplesData(i).Data = csvread(['Samples\' SamplesFiles{i}]);
-    [~,txt]=xlsread(['Labels\' LabelsFiles{i}]);
-    SamplesData(i).Labels = txt;
+    SamplesData(i).Labels = table2cell(readtable(['Labels\' LabelsFiles{i}],'ReadVariableNames',0,'Delimiter',','));
 end
-clear i SamplesFiles LabelsFiles txt
+clear i SamplesFiles LabelsFiles
 
 Labels = [];
 for i=1:length(SamplesData)
     Labels = [Labels; SamplesData(i).Labels];
 end
 CellTypes = unique(Labels);
+
+% remove cells annonated as 'Discard' 
+%(very small cell types < 0.1% of the total number of cells)
 CellTypes(strcmp('Discard',CellTypes)) = [];
 clear i Labels
-
-%% run LDA Classifier
+% Data is already arcsinh(5) transformed
+%% run LDA Classifier with 3-fold cross-validation on samples
 
 CVO = cvpartition(1:1:length(SamplesData),'k',3);
+Rejection_Threshold = 0.5:0.1:0.9;
 Accuracy = zeros(length(SamplesData),1);
+Accuracy_Rejection = zeros(length(SamplesData),length(Rejection_Threshold));
+Rejection_size = zeros(length(SamplesData),length(Rejection_Threshold));
 training_time = zeros(CVO.NumTestSets,1);
-testing_time = zeros(CVO.NumTestSets,1);
+testing_time = zeros(length(SamplesData),1);
 ConfusionMat = zeros(length(CellTypes));
-Prediction = [];
-Test = [];
+
 for i = 1:CVO.NumTestSets
     trIdx = find(CVO.training(i));
     teIdx = find(CVO.test(i));
@@ -59,37 +63,62 @@ for i = 1:CVO.NumTestSets
         LabelsTrain);
     training_time(i)=toc;          %in seconds
     
-    tic
-    
     for j=1:length(teIdx)
         DataTest = SamplesData(teIdx(j)).Data;
         LabelsTest = SamplesData(teIdx(j)).Labels;
-        
-        DataTest(strcmp('Discard',LabelsTest),:) = [];
+        tic
+        [Predictor,scores] = predict(classificationLDA,DataTest);
+        testing_time(teIdx(j))=toc;           %in seconds
+        Current_Scores = max(scores,[],2);
+        Predictor(strcmp('Discard',LabelsTest)) = [];
+        Current_Scores(strcmp('Discard',LabelsTest)) = [];
         LabelsTest(strcmp('Discard',LabelsTest)) = [];
-        
-        Predictor = predict(classificationLDA,DataTest);
         Accuracy(teIdx(j)) = nnz(strcmp(Predictor,LabelsTest))/size(LabelsTest,1);
         ConfusionMat = ConfusionMat + confusionmat(LabelsTest,Predictor,'order',CellTypes);
         
-        Prediction = [Prediction; Predictor];
-        Test = [Test; LabelsTest];
+        for r=1:length(Rejection_Threshold)
+            Rejection_size(teIdx(j),r)=nnz(Current_Scores < Rejection_Threshold(r))/size(LabelsTest,1);
+            Accuracy_Rejection(teIdx(j),r) = nnz(strcmp(Predictor(Current_Scores >= Rejection_Threshold(r)),LabelsTest(Current_Scores >= Rejection_Threshold(r))))...
+                /size(LabelsTest(Current_Scores >= Rejection_Threshold(r)),1);
+            
+        end
+        clear r
     end
     clear j
-    testing_time(i)=toc;           %in seconds
 end
 
 Total_time = sum(training_time)+sum(testing_time);
-cvAcc = mean(Accuracy)*100;
-cvSTD = std(Accuracy)*100;
 training_time = mean(training_time);
 testing_time = mean(testing_time);
+cvAcc = mean(Accuracy)*100;
+cvSTD = std(Accuracy)*100;
+disp(['LDA Accuracy = ' num2str(cvAcc) ' ' char(177) ' ' num2str(cvSTD) ' %'])
 clear i Predictor classificationLDA trIdx teIdx CVO DataTrain LabelsTrain
-clear DataTest LabelsTest  
+clear DataTest LabelsTest
+
+%% Accuracy and Rejection size with different rejection thresholds
+% Fig. 2
+figure,boxplot([Accuracy Accuracy_Rejection],'Labels',{'0','0.5','0.6','0.7','0.8','0.9'}),hold on
+gscatter([ones(length(Accuracy),1); 2*ones(length(Accuracy_Rejection),1);...
+    3*ones(length(Accuracy_Rejection),1); 4*ones(length(Accuracy_Rejection),1);...
+    5*ones(length(Accuracy_Rejection),1); 6*ones(length(Accuracy_Rejection),1)],...
+    [Accuracy; Accuracy_Rejection(:)],repmat(Samples_Tag,6,1))
+title('Classification Accuracy per Sample')
+xlabel('Posterior probability threshold'),ylabel('Accuracy')
+box on, grid on
+
+figure,boxplot([zeros(length(Accuracy),1) Rejection_size*100],'Labels',{'0','0.5','0.6','0.7','0.8','0.9'}),hold on
+gscatter([2*ones(length(Rejection_size),1);...
+    3*ones(length(Rejection_size),1); 4*ones(length(Rejection_size),1);...
+    5*ones(length(Rejection_size),1); 6*ones(length(Rejection_size),1)],...
+    Rejection_size(:)*100,repmat(Samples_Tag,5,1))
+title('Rejection Size per Sample')
+xlabel('Posterior probability threshold')
+ylabel('Percentage of rejected cells per sample')
+box on, grid on
 %% Performance evaluation
 
 % F1 measure
-% AccuracyPerCluster = diag(ConfusionMat)./sum(ConfusionMat,2);
 Precision = diag(ConfusionMat)./sum(ConfusionMat,1)';
 Recall = diag(ConfusionMat)./sum(ConfusionMat,2);
 Fmeasure = 2 * (Precision.*Recall)./(Precision+Recall);
@@ -97,16 +126,26 @@ MedianFmeasure = median(Fmeasure);
 Subset_size = sum(ConfusionMat,2);
 WeightedFmeasure = (Subset_size./sum(Subset_size))'*Fmeasure;
 
+disp(['Median F1-score = ' num2str(MedianFmeasure)])
+
+% Fig. 4
+Cmap = [repmat([1 0 0],11,1); repmat([1 1 0],11,1); repmat([0 1 0],9,1);...
+repmat([0 0 1],11,1); repmat([0 1 1],6,1); repmat([1 0 1],5,1); repmat([0.93 0.69 0.13],4,1)];
+figure,scatter(log10(Subset_size),Fmeasure,50,Cmap,'filled'),title('HMIS-2')
+xlabel('Log10(population size)'),ylabel('F1-score'),box on, grid on
 %% Population Frequency
 
 True_Freq = sum(ConfusionMat,2)./sum(sum(ConfusionMat));
 Predicted_Freq = sum(ConfusionMat,1)'./sum(sum(ConfusionMat));
 Max_Freq_diff = max(abs(True_Freq-Predicted_Freq))*100;
 
-figure,bar([True_Freq Predicted_Freq])
+disp(['delta_f = ' num2str(Max_Freq_diff)])
+figure,bar([True_Freq*100 Predicted_Freq*100])
 xticks(1:57)
 xticklabels(CellTypes)
 xtickangle(90)
 set(gca,'FontSize',10)
 set(gca,'XLim',[0 58])
-legend({'True','Predicted'},'FontSize',10),title('Human Mucosal Immune Dataset')
+legend({'True','Predicted'},'FontSize',10)
+legend show
+ylabel('Freq. %'),title('HMIS-2')
