@@ -25,7 +25,7 @@ for i=1:length(SamplesData)
     Labels = [Labels; SamplesData(i).Labels];
 end
 clear i
-%% run LDA Classifier
+%% run LDA Classifier with 5-fold cross-validation
 
 CVO = cvpartition(Labels,'k',5);
 Accuracy = zeros(CVO.NumTestSets,1);
@@ -37,44 +37,54 @@ for i = 1:CVO.NumTestSets
     trIdx = CVO.training(i);
     teIdx = CVO.test(i);
     
+    DataTrain = Data(trIdx,:);
+    LabelsTrain = Labels(trIdx);
     tic
     classificationLDA = fitcdiscr(...
-        Data(trIdx,:), ...
-        Labels(trIdx));
+        DataTrain(LabelsTrain~=0,:), ...
+        LabelsTrain(LabelsTrain~=0));
     training_time(i)=toc;          %in seconds
     
     tic
-    Predictor = predict(classificationLDA,Data(teIdx,:));
+    [Predictor,scores] = predict(classificationLDA,Data(teIdx,:));
+    Current_Scores = max(scores,[],2);
+    Predictor(Current_Scores < 0.4)=0;
+    testing_time(i)=toc;           %in seconds
     LabelsTest = Labels(teIdx);
     Accuracy(i) = nnz((Predictor(LabelsTest~=0)==LabelsTest(LabelsTest~=0)))/size(LabelsTest(LabelsTest~=0),1);
-    ConfusionMat = ConfusionMat + confusionmat(Labels(teIdx),Predictor,'order',CellTypes);
-    testing_time(i)=toc;           %in seconds
+    ConfusionMat = ConfusionMat + confusionmat(LabelsTest,Predictor,'order',CellTypes);
 end
 Total_time = sum(training_time)+sum(testing_time);
-cvAcc = mean(Accuracy)*100;
-cvSTD = std(Accuracy)*100;
 training_time = mean(training_time);
 testing_time = mean(testing_time);
+cvAcc = mean(Accuracy)*100;
+cvSTD = std(Accuracy)*100;
+disp(['LDA Accuracy = ' num2str(cvAcc) ' ' char(177) ' ' num2str(cvSTD) ' %'])
 clear i Predictor classificationLDA trIdx teIdx CVO Accuracy DataTrain LabelsTrain
 clear DataTest LabelsTest
 %% Performance evaluation
-
+col1 = ConfusionMat(2:end,1);
+ConfusionMat = ConfusionMat(2:end,2:end);
 % F1 measure
 Precision = diag(ConfusionMat)./sum(ConfusionMat,1)';
-Recall = diag(ConfusionMat)./sum(ConfusionMat,2);
+Recall = diag(ConfusionMat)./(sum(ConfusionMat,2)+col1);
 Fmeasure = 2 * (Precision.*Recall)./(Precision+Recall);
 MedianFmeasure = median(Fmeasure);
-Subset_size = sum(ConfusionMat,2);
-WeightedFmeasure = (Subset_size(2:end)./sum(Subset_size(2:end)))'*Fmeasure(2:end);
+Subset_size = sum(ConfusionMat,2)+col1;
+WeightedFmeasure = (Subset_size./sum(Subset_size))'*Fmeasure;
 
+disp(['Weighted F1-score = ' num2str(MeanWeightedFmeasure)])
+figure,scatter(log10(Subset_size),Fmeasure,100,'filled'),title('Multi-Center')
+xlabel('Log10(population size)'),ylabel('F1-score'),box on, grid on
 %% Population Frequency
 
-True_Freq = sum(ConfusionMat,2)./sum(sum(ConfusionMat));
-Predicted_Freq = sum(ConfusionMat,1)'./sum(sum(ConfusionMat));
+True_Freq = (sum(ConfusionMat,2)+col1)./(sum(sum(ConfusionMat))+sum(col1));
+Predicted_Freq = sum(ConfusionMat,1)'./(sum(sum(ConfusionMat))+sum(col1));
+Max_Freq_diff = max(abs(True_Freq-Predicted_Freq))*100;
 
-figure,bar([True_Freq(2:end) Predicted_Freq(2:end)])
+figure,bar([True_Freq*100 Predicted_Freq*100])
 xticklabels({'B Cells','CD4+ T Cells','CD8+ T Cells','Monocytes'})
 set(gca,'FontSize',20)
 legend({'True','Predicted'},'FontSize',15)
 legend show
-ylabel('Frequency'),title('Multi Centre CyTOF Data')
+ylabel('Freq. %'),title('Multi-Center')
