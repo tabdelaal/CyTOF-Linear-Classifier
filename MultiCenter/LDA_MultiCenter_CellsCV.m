@@ -73,7 +73,7 @@ MedianFmeasure = median(Fmeasure);
 Subset_size = sum(ConfusionMat,2)+col1;
 WeightedFmeasure = (Subset_size./sum(Subset_size))'*Fmeasure;
 
-disp(['Weighted F1-score = ' num2str(MeanWeightedFmeasure)])
+disp(['Weighted F1-score = ' num2str(WeightedFmeasure)])
 figure,scatter(log10(Subset_size),Fmeasure,100,'filled'),title('Multi-Center')
 xlabel('Log10(population size)'),ylabel('F1-score'),box on, grid on
 %% Population Frequency
