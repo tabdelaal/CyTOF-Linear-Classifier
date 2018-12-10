@@ -9,13 +9,15 @@ This is a Matlab implementation of "Predicting cell types in single cell mass cy
 
 CyTOF_LDAtrain function can be used to train a Linear Discriminant Analysis (LDA) classifier, on the labeled CyTOF samples. The trained classifier model can be then used to automatically annotate new CyTOF samples.
 
-For full description, check CyTOF_LDAtrain.m
+For full description, check CyTOF_LDAtrain
 
 2. function Predictions = CyTOF_LDApredict(TrainedModel,DataFolder,mode,RejectionThreshold)
 
 CyTOF_LDApredict function can be used to produce automatic cell type annotations for new samples, based on the trained LDA classifier using CyTOF_LDAtrain function.
 
-For full description, check CyTOF_LDApredict.m
+For full description, check CyTOF_LDApredict
+
+Implementation is available in R and Matlab
 
 **Experiments code description**
 
