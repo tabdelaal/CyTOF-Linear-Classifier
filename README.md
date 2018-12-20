@@ -1,7 +1,7 @@
 # CyTOF-Linear-Classifier
 ## LDA on mass cytometry data
 
-This is a Matlab and R implementation of "Predicting cell populations in single cell mass cytometry data", an automated method to annotate the CyTOF dataset.
+This is an implementation of the LDA classifier proposed in "Predicting cell populations in single cell mass cytometry data", an automated method to annotate the CyTOF dataset.
 
 **Implementation description**
 
@@ -21,7 +21,7 @@ Implementation is available in R and Matlab
 
 **Experiments code description**
 
-In the following six folders, AML, BMMC, PANORAMA, MultiCenter, HMIS-1 and HMIS-2, we provide Matlab scripts to reproduce the results shown in the publication, including the LDA and the Nearest Median classifiers performance, and comparisons with ACDC and DeepCyTOF. Also, we provide a simple documentation in pdf format.
+In the following six folders, AML, BMMC, PANORAMA, MultiCenter, HMIS-1 and HMIS-2, we provide Matlab scripts to reproduce the results shown in the publication, including the LDA and the Nearest Median classifiers performance, and comparisons with ACDC and DeepCyTOF. Also, we provide a full documentation in pdf format.
 
 Further, the k-NN classifier implementation is available in the HMIS-2 folder, including the editing and the feature selection functions.
 
