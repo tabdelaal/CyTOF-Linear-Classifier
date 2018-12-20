@@ -21,7 +21,7 @@ Implementation is available in R and Matlab
 
 **Experiments code description**
 
-In the following six folders, AML, BMMC, PANORAMA, MultiCenter, HMIS-1 and HMIS-2, we provide Matlab scripts to reproduce the results shown in the publication, including the LDA and the Nearest Median classifiers performance, and comparisons with ACDC and DeepCyTOF. Also, we provide a full documentation in pdf format.
+In the following six folders, AML, BMMC, PANORAMA, MultiCenter, HMIS-1 and HMIS-2, we provide Matlab scripts to reproduce the results shown in the pre-print, including the LDA and the Nearest Median classifiers performance, and comparisons with ACDC and DeepCyTOF. Also, we provide a full documentation in pdf format.
 
 Further, the k-NN classifier implementation is available in the HMIS-2 folder, including the editing and the feature selection functions.
 
