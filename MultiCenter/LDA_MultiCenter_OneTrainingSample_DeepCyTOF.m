@@ -63,9 +63,19 @@ cvSTD = std(Accuracy)*100;
 disp(['LDA Accuracy = ' num2str(cvAcc) ' ' char(177) ' ' num2str(cvSTD) ' %'])
 disp(['Weighted F1-score = ' num2str(MeanWeightedFmeasure)])
 
-% Supplementary Fig. S2
+% Supplementary Fig. S3
 figure,bar(WeightedFmeasure)
 xticklabels([1 3:16])
 set(gca,'YLim',[0.7 1])
 xlabel('Samples')
 ylabel('Weighted F1-score'),title('Multi-Center LDA Performance')
+
+% box plot
+figure,boxplot(WeightedFmeasure,[zeros(1,7),ones(1,8)])
+title('Multi-Center')
+set(gca,'YLim',[0.9 1])
+grid on
+xticklabels({'Batch 1(1-8)','Batch 2(9-16)'})
+hold on
+scatter(ones(7,1),WeightedFmeasure(1:7),20,'filled')
+scatter(2*ones(8,1),WeightedFmeasure(8:15),20,'filled')
