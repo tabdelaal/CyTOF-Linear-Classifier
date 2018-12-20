@@ -128,7 +128,7 @@ WeightedFmeasure = (Subset_size./sum(Subset_size))'*Fmeasure;
 
 disp(['Median F1-score = ' num2str(MedianFmeasure)])
 
-% Fig. 4
+% Supplementary Figure 8A
 Cmap = [repmat([1 0 0],11,1); repmat([1 1 0],11,1); repmat([0 1 0],9,1);...
 repmat([0 0 1],11,1); repmat([0 1 1],6,1); repmat([1 0 1],5,1); repmat([0.93 0.69 0.13],4,1)];
 figure,scatter(log10(Subset_size),Fmeasure,50,Cmap,'filled'),title('HMIS-2')
