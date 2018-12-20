@@ -25,4 +25,4 @@ In the following six folders, AML, BMMC, PANORAMA, MultiCenter, HMIS-1 and HMIS-
 
 The DeepCyTOF_on_HMIS folder contains python scripts needed to apply DeepCyTOF on our HMIS-1 and HMIS-2 datasets.
 
-All datasets can be downloaded from (https://www.dropbox.com/sh/cf3rinp4oan8ugm/AAD_-G93O72R88-_2McfL2D3a?dl=0)
+All datasets can be downloaded from Flow Repository (http://flowrepository.org/id/FR-FCM-ZYTT)
