@@ -73,3 +73,22 @@ set(gca,'FontSize',10)
 legend({'True','Predicted'},'FontSize',10)
 legend show
 ylabel('Freq. %'),title('BMMC')
+%% Population Frequency scatter plot
+
+X=log(True_Freq*100);
+Y=log(Predicted_Freq*100);
+
+% exclude platelet
+X(22)=[];
+Y(22)=[];
+CellTypes(22)=[];
+
+figure,scatter(X,Y,50,'filled')
+box on, grid on
+xlabel('Log(True frequency %)'),ylabel('Log(Predicted frequency %)')
+title('BMMC')
+for k=1:length(CellTypes)
+    text(X(k),Y(k),CellTypes{k})
+end
+lsline
+text(0,0,['R = ' num2str(corr(X,Y))])
