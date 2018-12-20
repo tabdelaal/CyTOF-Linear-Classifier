@@ -96,3 +96,17 @@ set(gca,'FontSize',20)
 legend({'True','Predicted'},'FontSize',15)
 legend show
 ylabel('Freq. %'),title('Multi-Center')
+%% Population Frequency scatter plot
+
+CellTypes = {'B cells','CD4+ T cells','CD8+ T cells','Monocytes'};
+X=log(True_Freq*100);
+Y=log(Predicted_Freq*100);
+figure,scatter(X,Y,50,'filled')
+box on, grid on
+xlabel('Log(True frequency %)'),ylabel('Log(Predicted frequency %)')
+title('Multi-Center')
+for k=1:length(CellTypes)
+    text(X(k),Y(k),CellTypes{k})
+end
+lsline
+text(3,3,['R = ' num2str(corr(X,Y))])
