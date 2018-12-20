@@ -83,3 +83,17 @@ set(gca,'FontSize',15)
 legend({'True','Predicted'},'FontSize',15)
 legend show
 ylabel('Freq. %'),title('AML')
+
+%% Population Frequency scatter plot
+
+X=log(True_Freq*100);
+Y=log(Predicted_Freq*100);
+figure,scatter(X,Y,50,'filled')
+box on, grid on
+xlabel('Log(True frequency %)'),ylabel('Log(Predicted frequency %)')
+title('AML')
+for k=1:length(CellTypes)
+    text(X(k),Y(k),CellTypes{k})
+end
+lsline
+text(0,0,['R = ' num2str(corr(X,Y))])
