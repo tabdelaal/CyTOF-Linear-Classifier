@@ -98,3 +98,16 @@ set(gca,'XLim',[0 7])
 legend({'True','Predicted'},'FontSize',10)
 legend show
 ylabel('Freq. %'),title('HMIS-1')
+%% Population Frequency scatter plot
+
+X=log(True_Freq*100);
+Y=log(Predicted_Freq*100);
+figure,scatter(X,Y,50,'filled')
+box on, grid on
+xlabel('Log(True frequency %)'),ylabel('Log(Predicted frequency %)')
+title('HMIS-1')
+for k=1:length(CellTypes)
+    text(X(k),Y(k),CellTypes{k})
+end
+lsline
+text(0,0,['R = ' num2str(corr(X,Y))])
