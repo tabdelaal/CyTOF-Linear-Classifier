@@ -37,8 +37,14 @@ if strcmp(mode,'FCS')
     for i = 1:length(SamplesFiles)
         SamplesData(i).Data = fca_readfcs([DataFolder SamplesFiles{i}]);
         SamplesData(i).Data = SamplesData(i).Data(:,TrainedModel.markers);
-        if (TrainedModel.arcsinh)
-           SamplesData(i).Data = asinh((SamplesData(i).Data-1)/5);
+        if (TrainedModel.Transformation)
+            SamplesData(i).Data = asinh((SamplesData(i).Data-1)/5);
+            if(strcmp(TrainedModel.Transformation,'arcsinh'))
+                SamplesData(i).Data=asinh(SamplesData(i).Data/5);
+            elseif (strcmp(TrainedModel.Transformation,'log'))
+                SamplesData(i).Data = log(SamplesData(i).Data);
+                SamplesData(i).Data(isinf(SamplesData(i).Data))=0;
+            end
         end
     end
     clear i
@@ -49,8 +55,14 @@ elseif strcmp(mode,'CSV')
     for i = 1:length(SamplesFiles)
         SamplesData(i).Data = csvread([DataFolder SamplesFiles{i}]);
         SamplesData(i).Data = SamplesData(i).Data(:,TrainedModel.markers);
-        if (TrainedModel.arcsinh)
-           SamplesData(i).Data = asinh((SamplesData(i).Data-1)/5);
+        if (TrainedModel.Transformation)
+            SamplesData(i).Data = asinh((SamplesData(i).Data-1)/5);
+            if(strcmp(TrainedModel.Transformation,'arcsinh'))
+                SamplesData(i).Data=asinh(SamplesData(i).Data/5);
+            elseif (strcmp(TrainedModel.Transformation,'log'))
+                SamplesData(i).Data = log(SamplesData(i).Data);
+                SamplesData(i).Data(isinf(SamplesData(i).Data))=0;
+            end
         end
     end
     clear i
