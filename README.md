@@ -19,6 +19,8 @@ For full description, check CyTOF_LDApredict
 
 Implementation is available in R and Matlab
 
+The 'Examples' folder contains R notebooks showing how to use the implementation, using CyTOF and Flow Cytometry datasets.
+
 **Experiments code description**
 
 In the following six folders, AML, BMMC, PANORAMA, MultiCenter, HMIS-1 and HMIS-2, we provide Matlab scripts to reproduce the results shown in the pre-print, including the LDA and the Nearest Median classifiers performance, and comparisons with ACDC and DeepCyTOF. Also, we provide a full documentation in pdf format.
