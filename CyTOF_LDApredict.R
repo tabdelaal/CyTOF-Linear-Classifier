@@ -36,18 +36,23 @@ CyTOF_LDApredict <- function (Model,TestingSamplesExt,mode,
     for (i in files){
       Testing.data = data.frame()
       Temp <- read.FCS(i,transformation = FALSE, truncate_max_range = FALSE)
-      colnames(Temp@exprs) <- Temp@parameters@data$desc
+      colnames(Temp@exprs) <- Temp@parameters@data$name
       Testing.data = as.data.frame(Temp@exprs)[,Model$markers]
       
-      if(Model$arcsinh){
-        Testing.data = asinh(Testing.data/5)
+      if(Model$Transformation != FALSE){
+        if(Model$Transformation == 'arcsinh'){
+          Testing.data = asinh(Testing.data/5)
+        }
+        else if (Model$Transformation == 'log'){
+          Testing.data = log(Testing.data)
+          Testing.data[sapply(Testing.data,is.infinite)] = 0
+        }
       }
       Predictions <- predict(Model$LDAclassifier,Testing.data)
       Post.max <-apply(Predictions$posterior,1,max)
-      Predictions <- factor(Predictions$class,levels = c(levels(Predictions$class),"unknown"))
-      Predictions[Post.max < RejectionThreshold] <- "unknown"
-      Predictions <- toString(Predictions)
-      Predictions <- strsplit(Predictions,",")
+      Predictions$class <- factor(Predictions$class,levels = c(levels(Predictions$class),"unknown"))
+      Predictions$class[Post.max < RejectionThreshold] <- "unknown"
+      Predictions <- list(as.character(Predictions$class))
       Cell.types <- c(Cell.types,Predictions)
     }
   }
@@ -60,15 +65,20 @@ CyTOF_LDApredict <- function (Model,TestingSamplesExt,mode,
       Temp <- read.csv(i,header = FALSE)
       Testing.data = as.data.frame(Temp)[,Model$markers]
       
-      if(Model$arcsinh){
-        Testing.data = asinh(Testing.data/5)
+      if(Model$Transformation != FALSE){
+        if(Model$Transformation == 'arcsinh'){
+          Testing.data = asinh(Testing.data/5)
+        }
+        else if (Model$Transformation == 'log'){
+          Testing.data = log(Testing.data)
+          Testing.data[sapply(Testing.data,is.infinite)] = 0
+        }
       }
       Predictions <- predict(Model$LDAclassifier,Testing.data)
       Post.max <-apply(Predictions$posterior,1,max)
-      Predictions <- factor(Predictions$class,levels = c(levels(Predictions$class),"unknown"))
-      Predictions[Post.max < RejectionThreshold] <- "unknown"
-      Predictions <- toString(Predictions)
-      Predictions <- strsplit(Predictions,",")
+      Predictions$class <- factor(Predictions$class,levels = c(levels(Predictions$class),"unknown"))
+      Predictions$class[Post.max < RejectionThreshold] <- "unknown"
+      Predictions <- list(as.character(Predictions$class))
       Cell.types <- c(Cell.types,Predictions)
     }
   }
