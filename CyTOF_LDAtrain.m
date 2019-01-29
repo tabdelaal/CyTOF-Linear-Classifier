@@ -1,4 +1,4 @@
-function Model = CyTOF_LDAtrain(SamplesFolder,mode,LabelsFolder,RelevantMarkers,arcsinh_transform)
+function Model = CyTOF_LDAtrain(SamplesFolder,mode,LabelsFolder,RelevantMarkers,LabelIndex,Transformation)
 % CyTOF_LDAtrain function can be used to train a Linear Discriminant
 % Analysis (LDA) classifier, on the labeled CyTOF samples. The trained
 % classifier model can be then used to automatically annotate new CyTOF
@@ -19,15 +19,23 @@ function Model = CyTOF_LDAtrain(SamplesFolder,mode,LabelsFolder,RelevantMarkers,
 % RelevantMarkers: list of integers, enumerating the markers to be used for
 %                  classification.
 %
-% arcsinh_transform: True = apply arcsinh transformation with cofactor of 5
-%                    prior to train the classifier.
-%                    False = no transformation applied.
+% LabelIndex: Integer value indicating the column containing the labels of
+%             each cell, in case it exists in the same files with the
+%             samples. In such case, 'LabelsFolder' is not used.
+%             FALSE (0) = labels are stored in separate csv files found in
+%             'LabelsFolder'
+%
+% Transformation: 'arcsinh = apply arcsinh transformation with cofactor of
+%                  5 prior to classifier training.
+%                 'log' = apply logarithmic transformation prior to
+%                  classifier training.
+%                  false = no transformation applied.
 %
 % Example
-% Model = CyTOF_LDAtrain('HMIS-2\Samples\','CSV','HMIS-2\Labels\',[1:28],True)
+% Model = CyTOF_LDAtrain('HMIS-2\Samples\','CSV','HMIS-2\Labels\',[1:28],0,'arcsinh')
 %
 % For citation and further information please refer to this publication:
-% "Predicting cell types in single cell mass cytometry data"
+% "Predicting cell populations in single cell mass cytometry data"
 
 % read the training data
 SamplesData = struct('Data',[],'Labels',{});
@@ -38,6 +46,9 @@ if strcmp(mode,'FCS')
     SamplesFiles = sort_nat(SamplesFiles);
     for i = 1:length(SamplesFiles)
         SamplesData(i).Data = fca_readfcs([SamplesFolder SamplesFiles{i}]);
+        if (LabelIndex)
+            SamplesData(i).Labels = SamplesData(i).Data(:,LabelIndex);
+        end
         SamplesData(i).Data = SamplesData(i).Data(:,RelevantMarkers);
     end
     clear i
@@ -47,6 +58,9 @@ elseif strcmp(mode,'CSV')
     SamplesFiles = sort_nat(SamplesFiles);
     for i = 1:length(SamplesFiles)
         SamplesData(i).Data = csvread([SamplesFolder SamplesFiles{i}]);
+        if (LabelIndex)
+            SamplesData(i).Labels = SamplesData(i).Data(:,LabelIndex);
+        end
         SamplesData(i).Data = SamplesData(i).Data(:,RelevantMarkers);
     end
     clear i
@@ -56,18 +70,20 @@ else
     return;
 end
 
-H=dir(fullfile(LabelsFolder,'*.csv'));
-LabelsFiles = cellstr(char(H(1:end).name));
-LabelsFiles = sort_nat(LabelsFiles);
-for i = 1:length(LabelsFiles)
-    SamplesData(i).Labels = table2cell(readtable([LabelsFolder LabelsFiles{i}],'ReadVariableNames',0,'Delimiter',','));
-    if (length(SamplesData(i).Data) ~= length(SamplesData(i).Labels))
-        msgbox(['Length of training data and labels of sample ' i ' does not match'], ...
-            'Error','error');
-        return;
+if (~LabelIndex)
+    H=dir(fullfile(LabelsFolder,'*.csv'));
+    LabelsFiles = cellstr(char(H(1:end).name));
+    LabelsFiles = sort_nat(LabelsFiles);
+    for i = 1:length(LabelsFiles)
+        SamplesData(i).Labels = table2cell(readtable([LabelsFolder LabelsFiles{i}],'ReadVariableNames',0,'Delimiter',','));
+        if (length(SamplesData(i).Data) ~= length(SamplesData(i).Labels))
+            msgbox(['Length of training data and labels of sample ' i ' does not match'], ...
+                'Error','error');
+            return;
+        end
     end
+    clear i H SamplesFiles LabelsFiles
 end
-clear i H SamplesFiles LabelsFiles
 
 Data=[];
 Labels=[];
@@ -78,13 +94,18 @@ end
 clear i SamplesData
 
 % Apply arcsinh tranformation
-if (arcsinh_transform)
-    Data=asinh((Data-1)/5);
+if (Transformation)
+    if(strcmp(Transformation,'arcsinh'))
+        Data=asinh(Data/5);
+    elseif (strcmp(Transformation,'log'))
+        Data = log(Data);
+        Data(isinf(Data))=0;
+    end
 end
 
 % Train LDA classifier
-Model.LDAclassifier = fitcdiscr(Data,Labels);    
-Model.arcsinh = arcsinh_transform;      % Keep information if the model works on transformed data or not
+Model.LDAclassifier = fitcdiscr(Data,Labels);
+Model.Transformation = Transformation;      % Keep information if the model works on transformed data or not
 Model.markers = RelevantMarkers;        % Keep information of the markers used to train the model
 end
 %%
